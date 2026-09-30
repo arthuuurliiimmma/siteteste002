@@ -391,7 +391,10 @@ function publicStore(store) {
     redirectMode: store.redirectMode || "checkout",
     status: store.status || "draft",
     activeGateway,
-    paymentMethods: activeGateway === "paradise" ? ["pix"] : ["pix", "card"],
+    paymentMethods:
+  activeGateway === "paradise" || activeGateway === "blackcat"
+    ? ["pix"]
+    : ["pix", "card"],
     shippingOptions: normalizeShippingOptions(store.shippingOptions)
   };
 }
