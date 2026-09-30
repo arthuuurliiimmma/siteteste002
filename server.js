@@ -728,8 +728,20 @@ function normalizeBlackcatPayment(json) {
 }
 
 async function createBlackcatPayment(store, order, req) {
-  if (!store.blackcatApiKey) throw new Error("Configure a chave da BlackCat no painel.");
-  const json = await gatewayFetchJson(`${blackcatApiBaseUrl.replace(/\/$/, "")}/sales/create-sale`, store.blackcatApiKey, blackcatPayload(order, req));
+  if (!store.blackcatApiKey) {
+    throw new Error("Configure a chave da BlackCat no painel.");
+  }
+
+  if (order.paymentMethod === "card") {
+    throw new Error("Pagamento com cartão indisponível no momento. Tente pagar com Pix.");
+  }
+
+  const json = await gatewayFetchJson(
+    `${blackcatApiBaseUrl.replace(/\/$/, "")}/sales/create-sale`,
+    store.blackcatApiKey,
+    blackcatPayload(order, req)
+  );
+
   return normalizeBlackcatPayment(json);
 }
 
