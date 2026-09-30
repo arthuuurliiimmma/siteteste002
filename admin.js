@@ -48,6 +48,11 @@ const adminPageTitle = document.querySelector("#adminPageTitle");
 const adminPageSubtitle = document.querySelector("#adminPageSubtitle");
 const adminViews = [...document.querySelectorAll("[data-admin-view]")];
 const adminNavLinks = [...document.querySelectorAll("[data-admin-nav]")];
+const dataList = document.querySelector("#dataList");
+const dataStatus = document.querySelector("#dataStatus");
+const dataSearch = document.querySelector("#dataSearch");
+const refreshData = document.querySelector("#refreshData");
+const clearData = document.querySelector("#clearData");
 
 const viewCopy = {
   dashboard: {
