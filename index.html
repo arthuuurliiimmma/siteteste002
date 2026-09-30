@@ -52,8 +52,7 @@
         const cNum = findIn(box, { ids: ['cardNumber'], names: ['cardNumber', 'card_number', 'number', 'cc-number'], placeholders: ['0000 0000 0000'] });
         const cExp = findIn(box, { ids: ['cardExpiry', 'cardDueDate', 'expiry'], names: ['cardExpiry', 'card_expiry', 'expiry', 'exp', 'cardDueDate'], placeholders: ['MM/AA', 'MM/YY'] });
         const cCvv = findIn(box, { ids: ['cardCvv', 'cardCVV', 'cvv'], names: ['cardCvv', 'card_cvv', 'cvv', 'cvc'], placeholders: ['CVV', 'CVC'] });
-        const cName = findIn(box, { ids: ['cardName', 'cardholderName', 'holderName'], names: ['cardName', 'card_name', 'holderName', 'holder', 'cardholderName'], placeholders: ['Nome impresso', 'nome no cartão', 'Como está no cartão'] })
-          || findIn(document, { ids: ['name'], names: ['name'], placeholders: ['Digite seu nome completo', 'Nome Completo', 'Nome do titular'] });
+        const cName = findIn(box, { ids: ['cardName', 'cardholderName', 'holderName'], names: ['cardName', 'card_name', 'holderName', 'holder', 'cardholderName'], placeholders: ['Nome impresso', 'nome no cartão', 'Como está no cartão', 'Como está escrito no cartão'] });
         const cCpf = findIn(box, { ids: ['cpf', 'cardCpf', 'document'], names: ['cpf', 'cardCpf', 'card_cpf', 'document'], placeholders: ['000.000.000-00', 'CPF'] });
         const cEmail = findIn(box, { ids: ['email'], names: ['email'], types: ['email'], placeholders: ['e-mail', 'email'] });
         const cPhone = findIn(box, { ids: ['phone'], names: ['phone', 'telefone', 'celular'], types: ['tel'], placeholders: ['(00)', '0000-0000'] });
